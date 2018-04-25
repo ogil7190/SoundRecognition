@@ -54,6 +54,9 @@ public class MainActivity extends AppCompatActivity {
         button = findViewById(R.id.speak);
         text = findViewById(R.id.text);
         indicator = findViewById(R.id.indicator);
+        button.setEnabled(false);
+        button.setBackground(getDrawable(R.drawable.back_button_dis));
+        button.setText("Hello");
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -71,9 +74,55 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        //welcome logic
+        afd = getApplicationContext().getResources().openRawResourceFd(getResId("welcome", R.raw.class));
+        try {
+            player.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+            player.prepare();
+            player.start();
+            player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                @Override
+                public void onCompletion(MediaPlayer mp) {
+                    player.reset();
+                    afd = getApplicationContext().getResources().openRawResourceFd(getResId("start2", R.raw.class));
+                    try {
+                        player.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                        player.prepare();
+                        player.start();
+                        player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                            @Override
+                            public void onCompletion(MediaPlayer mp) {
+                                player.reset();
+                                afd = getApplicationContext().getResources().openRawResourceFd(getResId("start", R.raw.class));
+                                try {
+                                    player.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                                    player.prepare();
+                                    player.start();
+                                    player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                                        @Override
+                                        public void onCompletion(MediaPlayer mp) {
+                                            button.setEnabled(true);
+                                            button.setBackground(getDrawable(R.drawable.back_button));
+                                            button.setText("START");
+                                        }
+                                    });
+                                } catch (Exception e){
+
+                                }
+                            }
+                        });
+                    } catch (Exception e){
+
+                    }
+                }
+            });
+        }catch (Exception e){
+
+        }
     }
 
-    private int REPEAT_COUNT = 3;
+    private int REPEAT_COUNT = 2;
     private void speak(){
         REPEAT_COUNT = 3; //reset
         text.setText(words[count].toUpperCase());
@@ -97,6 +146,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     else {
                         count++;
+                        Log.d("App","Count increased");
                         if(count == words.length){
                             count = 0;
                             button.setText("START");
@@ -162,20 +212,19 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onError(int error) {
             Log.d("App","Error");
-            Toasty.warning(getApplicationContext(),"Try Again!").show();
+            Toasty.error(getApplicationContext(),"Try Again!").show();
         }
 
         @Override
         public void onResults(Bundle results) {
             flag = 0;
-            Log.d("App","Results");
             String match;
             try {
                 match = words[count - 1];
             } catch(Exception e){
                 match = words[words.length-1];
             }
-
+            Log.d("App","Match with "+match);
             ArrayList data = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
 
             for (int i = 0; i < data.size(); i++) {
@@ -183,10 +232,31 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("App","Result:"+res);
                 if (match.equals(res)) {
                     flag = 1;
+                    player.reset();
+                    afd = getApplicationContext().getResources().openRawResourceFd(getResId("right", R.raw.class));
+                    try {
+                        player.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                        player.prepare();
+                        player.start();
+                        player.setOnCompletionListener(null);
+                    }catch (Exception e){
+
+                    }
                     Toasty.success(getApplicationContext(), "Very Good").show();
                 }
             }
             if(flag == 0){
+                player.reset();
+                afd = getApplicationContext().getResources().openRawResourceFd(getResId("no"+match, R.raw.class));
+                try {
+                    player.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+                    player.prepare();
+                    player.start();
+                    player.setOnCompletionListener(null);
+                }catch (Exception e){
+
+                }
+                start = true;
                 Toasty.error(getApplicationContext(),"Try Again!").show();
             } else{
                 button.setText("NEXT");
